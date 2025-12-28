@@ -701,19 +701,43 @@ export default function Index() {
           return;
         }
 
-        // Simulate final processing and show completion
-        setTimeout(() => {
-          setAllLeads((prev) => [...prev, ...importedLeads]);
-          setDisplayedLeads((prev) => [...prev, ...importedLeads]);
+        // Send imported leads to server to save to source CSV
+        try {
           setImportProgress(100);
-        }, 300);
+          const response = await fetch("/api/leads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ leads: importedLeads }),
+          });
 
-        setTimeout(() => {
+          if (!response.ok) {
+            throw new Error("Failed to save leads to server");
+          }
+
+          const result = await response.json();
+          console.log("Leads saved to server:", result);
+
+          // Reload all leads from server to get updated data with proper IDs
+          const leadsResponse = await fetch("/api/leads");
+          if (leadsResponse.ok) {
+            const leadsData = await leadsResponse.json();
+            setAllLeads(leadsData.leads);
+            setDisplayedLeads(leadsData.leads);
+          }
+
+          setTimeout(() => {
+            setImportModalOpen(false);
+            toast.success(
+              `${importedLeads.length} lead(s) imported successfully and saved to source`,
+            );
+          }, 500);
+        } catch (error) {
+          console.error("Failed to save leads to server:", error);
           setImportModalOpen(false);
-          toast.success(
-            `${importedLeads.length} lead(s) imported successfully`,
-          );
-        }, 1500);
+          toast.error("Failed to save imported leads to source file");
+        }
       } catch (error) {
         setImportModalOpen(false);
         toast.error("Failed to import CSV file");
