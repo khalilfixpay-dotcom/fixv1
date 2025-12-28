@@ -788,7 +788,9 @@ export default function Index() {
 
         // Send imported leads to server to save to source CSV
         try {
+          console.log(`Sending ${importedLeads.length} leads to server...`);
           setImportProgress(100);
+
           const response = await fetch("/api/leads", {
             method: "POST",
             headers: {
@@ -797,17 +799,21 @@ export default function Index() {
             body: JSON.stringify({ leads: importedLeads }),
           });
 
+          const result = await response.json();
+          console.log("Server response:", result);
+
           if (!response.ok) {
-            throw new Error("Failed to save leads to server");
+            const errorMsg = result.message || "Failed to save leads to server";
+            throw new Error(errorMsg);
           }
 
-          const result = await response.json();
-          console.log("Leads saved to server:", result);
+          console.log("Leads saved to server successfully");
 
           // Reload all leads from server to get updated data with proper IDs
           const leadsResponse = await fetch("/api/leads");
           if (leadsResponse.ok) {
             const leadsData = await leadsResponse.json();
+            console.log(`Reloaded ${leadsData.leads.length} leads from server`);
             setAllLeads(leadsData.leads);
             setDisplayedLeads(leadsData.leads);
           }
@@ -819,9 +825,10 @@ export default function Index() {
             );
           }, 500);
         } catch (error) {
-          console.error("Failed to save leads to server:", error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          console.error("Failed to save leads to server:", errorMsg);
           setImportModalOpen(false);
-          toast.error("Failed to save imported leads to source file");
+          toast.error(`Failed to import: ${errorMsg}`);
         }
       } catch (error) {
         setImportModalOpen(false);
