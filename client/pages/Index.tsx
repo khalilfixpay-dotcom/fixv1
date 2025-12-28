@@ -150,8 +150,9 @@ export default function Index() {
   const selection = useLeadsSelection();
 
   // Core data state - SINGLE SOURCE OF TRUTH
-  const [allLeads, setAllLeads] = useState<Lead[]>(MOCK_LEADS);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [displayedLeads, setDisplayedLeads] = useState<Lead[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   const [credits, setCredits] = useState(1000);
   const [savedLists, setSavedLists] = useState<SavedList[]>([]);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
