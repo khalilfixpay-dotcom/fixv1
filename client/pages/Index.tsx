@@ -193,6 +193,27 @@ export default function Index() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [totalImportLeads, setTotalImportLeads] = useState(0);
 
+  // Load leads from CSV file on component mount
+  useEffect(() => {
+    const loadLeads = async () => {
+      try {
+        const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
+        if (leads.length > 0) {
+          setAllLeads(leads);
+          setDisplayedLeads(leads);
+        } else {
+          console.warn("No leads loaded from CSV file");
+        }
+      } catch (error) {
+        console.error("Failed to load leads from CSV:", error);
+      } finally {
+        setIsLoadingLeads(false);
+      }
+    };
+
+    loadLeads();
+  }, []);
+
   // Load state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("leads-app-state");
