@@ -35,25 +35,31 @@ export const handleSaveLists: RequestHandler = async (req, res) => {
     const { lists } = req.body as SaveListsRequest;
 
     if (!lists || !Array.isArray(lists)) {
+      console.warn("Invalid lists request: not an array or missing lists field");
       return res.status(400).json({
         success: false,
         message: "Invalid lists data",
       } as SaveListsResponse);
     }
 
+    console.log(`Saving ${lists.length} list(s) to file...`);
+
     // Write lists to JSON file
     const data = { lists, lastUpdated: new Date().toISOString() };
+    console.log(`Writing to path: ${LISTS_JSON_PATH}`);
     await fs.writeFile(LISTS_JSON_PATH, JSON.stringify(data, null, 2), "utf-8");
 
+    console.log(`Successfully saved ${lists.length} list(s)`);
     return res.json({
       success: true,
       message: `Successfully saved ${lists.length} list(s)`,
     } as SaveListsResponse);
   } catch (error) {
-    console.error("Error saving lists:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error saving lists:", errorMsg);
     res.status(500).json({
       success: false,
-      message: "Failed to save lists",
+      message: `Failed to save lists: ${errorMsg}`,
     } as SaveListsResponse);
   }
 };
