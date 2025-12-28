@@ -158,7 +158,6 @@ export default function Index() {
     if (saved) {
       try {
         const state = JSON.parse(saved);
-        if (state.allLeads) setAllLeads(state.allLeads);
         if (state.savedLists) setSavedLists(state.savedLists);
         if (state.savedFilters) setSavedFilters(state.savedFilters);
         if (state.credits) setCredits(state.credits);
@@ -168,15 +167,19 @@ export default function Index() {
     }
   }, []);
 
-  // Save state to localStorage
+  // Save state to localStorage (only save essential data, not the massive allLeads array)
   useEffect(() => {
-    localStorage.setItem("leads-app-state", JSON.stringify({
-      allLeads,
-      savedLists,
-      savedFilters,
-      credits,
-    }));
-  }, [allLeads, savedLists, savedFilters, credits]);
+    try {
+      localStorage.setItem("leads-app-state", JSON.stringify({
+        savedLists,
+        savedFilters,
+        credits,
+      }));
+    } catch (e) {
+      // Silently fail if localStorage quota exceeded
+      console.warn("Failed to save state to localStorage:", e);
+    }
+  }, [savedLists, savedFilters, credits]);
 
   // Filter and sort leads
   const filteredLeads = displayedLeads.filter(lead => {
