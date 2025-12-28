@@ -277,6 +277,7 @@ export default function Index() {
   useEffect(() => {
     const saveLists = async () => {
       try {
+        console.log(`Saving ${savedLists.length} lists to server...`);
         const response = await fetch("/api/lists", {
           method: "POST",
           headers: {
@@ -285,13 +286,18 @@ export default function Index() {
           body: JSON.stringify({ lists: savedLists }),
         });
 
+        const result = await response.json();
+        console.log("Server response:", result);
+
         if (!response.ok) {
-          throw new Error("Failed to save lists to server");
+          const errorMsg = result.message || "Failed to save lists to server";
+          throw new Error(errorMsg);
         }
 
-        console.log("Lists saved to server");
+        console.log("Lists saved to server successfully");
       } catch (error) {
-        console.error("Failed to save lists to server:", error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error("Failed to save lists to server:", errorMsg);
         // Still save to localStorage as fallback
         try {
           localStorage.setItem(
@@ -302,6 +308,7 @@ export default function Index() {
               credits,
             }),
           );
+          console.log("Lists saved to localStorage as fallback");
         } catch (e) {
           console.warn("Failed to save to localStorage:", e);
         }
@@ -312,7 +319,7 @@ export default function Index() {
     if (sessionStorage.getItem("lists-loaded-from-server") === "true") {
       saveLists();
     }
-  }, [savedLists]);
+  }, [savedLists, savedFilters, credits]);
 
   // Save other state to localStorage (filters, credits)
   useEffect(() => {
