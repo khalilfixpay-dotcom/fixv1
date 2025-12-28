@@ -78,12 +78,19 @@ function csvToLeads(csvContent: string): Lead[] {
  */
 export const handleGetLeads: RequestHandler = async (req, res) => {
   try {
+    console.log(`Reading leads from: ${LEADS_CSV_PATH}`);
     const csvContent = await fs.readFile(LEADS_CSV_PATH, "utf-8");
     const leads = csvToLeads(csvContent);
+    console.log(`Successfully read ${leads.length} leads from CSV`);
     res.json({ leads, success: true });
   } catch (error) {
-    console.error("Error reading leads CSV:", error);
-    res.status(500).json({ success: false, leads: [], error: "Failed to read leads" });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error reading leads CSV:", errorMsg);
+    res.status(500).json({
+      success: false,
+      leads: [],
+      error: `Failed to read leads: ${errorMsg}`
+    });
   }
 };
 
