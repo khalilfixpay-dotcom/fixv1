@@ -147,6 +147,11 @@ export default function Index() {
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [editingFilterId, setEditingFilterId] = useState<string | null>(null);
 
+  // Import progress state
+  const [importProgress, setImportProgress] = useState(0);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [totalImportLeads, setTotalImportLeads] = useState(0);
+
   // Load state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("leads-app-state");
@@ -495,10 +500,16 @@ export default function Index() {
 
         const importedLeads: Lead[] = [];
         let maxId = Math.max(...allLeads.map(l => l.id), 0);
+        const validLines = lines.slice(1).filter(line => line.trim());
+        const totalLeads = validLines.length;
 
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
+        setTotalImportLeads(totalLeads);
+        setImportProgress(0);
+        setImportModalOpen(true);
+
+        // Process leads with progress updates
+        for (let i = 0; i < validLines.length; i++) {
+          const line = validLines[i].trim();
 
           const values: string[] = [];
           let current = "";
@@ -536,17 +547,31 @@ export default function Index() {
               });
             }
           }
+
+          // Update progress
+          const progress = Math.round(((i + 1) / totalLeads) * 100);
+          setImportProgress(progress);
         }
 
         if (importedLeads.length === 0) {
+          setImportModalOpen(false);
           toast.error("No valid leads found in the CSV file");
           return;
         }
 
-        setAllLeads(prev => [...prev, ...importedLeads]);
-        setDisplayedLeads(prev => [...prev, ...importedLeads]);
-        toast.success(`${importedLeads.length} lead(s) imported successfully`);
+        // Simulate final processing and show completion
+        setTimeout(() => {
+          setAllLeads(prev => [...prev, ...importedLeads]);
+          setDisplayedLeads(prev => [...prev, ...importedLeads]);
+          setImportProgress(100);
+        }, 300);
+
+        setTimeout(() => {
+          setImportModalOpen(false);
+          toast.success(`${importedLeads.length} lead(s) imported successfully`);
+        }, 1500);
       } catch (error) {
+        setImportModalOpen(false);
         toast.error("Failed to import CSV file");
         console.error("Import error:", error);
       }
