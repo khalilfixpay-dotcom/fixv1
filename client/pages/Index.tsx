@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit } from "lucide-react";
 import { useLeadsSelection } from "@/hooks/useLeadsSelection";
+import { loadLeadsFromCSV } from "@/lib/csvParser";
 
 interface Lead {
   id: number;
@@ -141,121 +142,17 @@ const COUNTRIES = [
   "Egypt",
 ];
 
-const FIRST_NAMES = [
-  "James",
-  "Floyd",
-  "Ronald",
-  "Marvin",
-  "Jerome",
-  "Kathryn",
-  "Jacobo",
-  "Kristin",
-  "Sarah",
-  "Michael",
-  "Emily",
-  "David",
-  "Jessica",
-  "Christopher",
-  "Amanda",
-  "Daniel",
-  "Laura",
-  "Matthew",
-  "Sophie",
-  "Andrew",
-  "Elizabeth",
-  "Ryan",
-  "Michelle",
-  "Kevin",
-  "Jennifer",
-  "Brandon",
-  "Ashley",
-  "Justin",
-  "Nicole",
-  "Tyler",
-  "Anna",
-  "Robert",
-  "Lisa",
-  "Mary",
-  "Patricia",
-];
-
-const LAST_NAMES = [
-  "Cooper",
-  "Miles",
-  "Richards",
-  "McKinney",
-  "Bell",
-  "Murphy",
-  "Jones",
-  "Watson",
-  "Johnson",
-  "Brown",
-  "Wilson",
-  "Davis",
-  "Martinez",
-  "Lee",
-  "Taylor",
-  "Anderson",
-  "Thomas",
-  "Jackson",
-  "White",
-  "Harris",
-  "Martin",
-  "Thompson",
-  "Garcia",
-  "Rodriguez",
-  "Kim",
-  "Chen",
-  "Park",
-  "Evans",
-  "Smith",
-  "Williams",
-  "Miller",
-];
-
-const generateMockLeads = (): Lead[] => {
-  let id = 1;
-  const leads: Lead[] = [];
-
-  INDUSTRIES.forEach((industry) => {
-    for (let i = 0; i < 10; i++) {
-      const firstName =
-        FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-      const lastName =
-        LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-      const country = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
-
-      leads.push({
-        id,
-        name: `${firstName} ${lastName}`,
-        industry,
-        location: country,
-        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@company.com`,
-        phone: `(${Math.floor(Math.random() * 900) + 100}) 555-${Math.floor(
-          Math.random() * 10000,
-        )
-          .toString()
-          .padStart(4, "0")}`,
-        website: `${lastName.toLowerCase()}.com`,
-        emailUnlocked: false,
-        phoneUnlocked: false,
-      });
-      id++;
-    }
-  });
-
-  return leads;
-};
-
-const MOCK_LEADS = generateMockLeads();
+// CSV file path for leads data (stored in public folder)
+const LEADS_CSV_URL = "/leads.csv";
 
 export default function Index() {
   // Selection state
   const selection = useLeadsSelection();
 
   // Core data state - SINGLE SOURCE OF TRUTH
-  const [allLeads, setAllLeads] = useState<Lead[]>(MOCK_LEADS);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [displayedLeads, setDisplayedLeads] = useState<Lead[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   const [credits, setCredits] = useState(1000);
   const [savedLists, setSavedLists] = useState<SavedList[]>([]);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
@@ -296,22 +193,143 @@ export default function Index() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [totalImportLeads, setTotalImportLeads] = useState(0);
 
-  // Load state from localStorage
+  // Load leads from server API on component mount
   useEffect(() => {
-    const saved = localStorage.getItem("leads-app-state");
-    if (saved) {
+    const loadLeads = async () => {
       try {
-        const state = JSON.parse(saved);
-        if (state.savedLists) setSavedLists(state.savedLists);
-        if (state.savedFilters) setSavedFilters(state.savedFilters);
-        if (state.credits) setCredits(state.credits);
-      } catch (e) {
-        console.error("Failed to load state", e);
+        // Try to load from server API first
+        const response = await fetch("/api/leads");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.leads && data.leads.length > 0) {
+            setAllLeads(data.leads);
+            setDisplayedLeads(data.leads);
+            console.log("Leads loaded from server:", data.leads.length);
+          }
+        } else {
+          // Fallback to loading from CSV file directly
+          console.warn(
+            "Failed to load from server API, falling back to CSV file",
+          );
+          const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
+          if (leads.length > 0) {
+            setAllLeads(leads);
+            setDisplayedLeads(leads);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load leads:", error);
+        // Try CSV file as last resort
+        try {
+          const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
+          if (leads.length > 0) {
+            setAllLeads(leads);
+            setDisplayedLeads(leads);
+          }
+        } catch (csvError) {
+          console.error("Failed to load from CSV file:", csvError);
+        }
+      } finally {
+        setIsLoadingLeads(false);
       }
-    }
+    };
+
+    loadLeads();
   }, []);
 
-  // Save state to localStorage (only save essential data, not the massive allLeads array)
+  // Load state from server (lists) and localStorage (filters, credits)
+  useEffect(() => {
+    const loadState = async () => {
+      // Try to load lists from server first
+      try {
+        const listsResponse = await fetch("/api/lists");
+        if (listsResponse.ok) {
+          const listsData = await listsResponse.json();
+          if (listsData.lists && listsData.lists.length > 0) {
+            setSavedLists(listsData.lists);
+            console.log("Lists loaded from server:", listsData.lists.length);
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to load lists from server, trying localStorage:",
+          error,
+        );
+      }
+
+      // Load other state from localStorage (backward compatibility)
+      const saved = localStorage.getItem("leads-app-state");
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          if (state.savedFilters) setSavedFilters(state.savedFilters);
+          if (state.credits) setCredits(state.credits);
+          // If server lists failed, try localStorage lists as fallback
+          if (
+            state.savedLists &&
+            !sessionStorage.getItem("lists-loaded-from-server")
+          ) {
+            setSavedLists(state.savedLists);
+          }
+        } catch (e) {
+          console.error("Failed to load state from localStorage", e);
+        }
+      }
+      sessionStorage.setItem("lists-loaded-from-server", "true");
+    };
+
+    loadState();
+  }, []);
+
+  // Save lists to server whenever they change
+  useEffect(() => {
+    const saveLists = async () => {
+      try {
+        console.log(`Saving ${savedLists.length} lists to server...`);
+        const response = await fetch("/api/lists", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ lists: savedLists }),
+        });
+
+        const result = await response.json();
+        console.log("Server response:", result);
+
+        if (!response.ok) {
+          const errorMsg = result.message || "Failed to save lists to server";
+          throw new Error(errorMsg);
+        }
+
+        console.log("Lists saved to server successfully");
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error("Failed to save lists to server:", errorMsg);
+        // Still save to localStorage as fallback
+        try {
+          localStorage.setItem(
+            "leads-app-state",
+            JSON.stringify({
+              savedLists,
+              savedFilters,
+              credits,
+            }),
+          );
+          console.log("Lists saved to localStorage as fallback");
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+      }
+    };
+
+    // Only save if lists have changed (after initial load)
+    if (sessionStorage.getItem("lists-loaded-from-server") === "true") {
+      saveLists();
+    }
+  }, [savedLists, savedFilters, credits]);
+
+  // Save other state to localStorage (filters, credits)
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -326,7 +344,7 @@ export default function Index() {
       // Silently fail if localStorage quota exceeded
       console.warn("Failed to save state to localStorage:", e);
     }
-  }, [savedLists, savedFilters, credits]);
+  }, [savedFilters, credits]);
 
   // Filter and sort leads
   const filteredLeads = displayedLeads.filter((lead) => {
@@ -783,19 +801,51 @@ export default function Index() {
           return;
         }
 
-        // Simulate final processing and show completion
-        setTimeout(() => {
-          setAllLeads((prev) => [...prev, ...importedLeads]);
-          setDisplayedLeads((prev) => [...prev, ...importedLeads]);
+        // Send imported leads to server to save to source CSV
+        try {
+          console.log(`Sending ${importedLeads.length} leads to server...`);
           setImportProgress(100);
-        }, 300);
 
-        setTimeout(() => {
+          const response = await fetch("/api/leads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ leads: importedLeads }),
+          });
+
+          const result = await response.json();
+          console.log("Server response:", result);
+
+          if (!response.ok) {
+            const errorMsg = result.message || "Failed to save leads to server";
+            throw new Error(errorMsg);
+          }
+
+          console.log("Leads saved to server successfully");
+
+          // Reload all leads from server to get updated data with proper IDs
+          const leadsResponse = await fetch("/api/leads");
+          if (leadsResponse.ok) {
+            const leadsData = await leadsResponse.json();
+            console.log(`Reloaded ${leadsData.leads.length} leads from server`);
+            setAllLeads(leadsData.leads);
+            setDisplayedLeads(leadsData.leads);
+          }
+
+          setTimeout(() => {
+            setImportModalOpen(false);
+            toast.success(
+              `${importedLeads.length} lead(s) imported successfully and saved to source`,
+            );
+          }, 500);
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+          console.error("Failed to save leads to server:", errorMsg);
           setImportModalOpen(false);
-          toast.success(
-            `${importedLeads.length} lead(s) imported successfully`,
-          );
-        }, 1500);
+          toast.error(`Failed to import: ${errorMsg}`);
+        }
       } catch (error) {
         setImportModalOpen(false);
         toast.error("Failed to import CSV file");
