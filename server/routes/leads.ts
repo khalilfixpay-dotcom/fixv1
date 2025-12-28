@@ -95,12 +95,15 @@ export const handleAddLeads: RequestHandler = async (req, res) => {
     const { leads: newLeads } = req.body as AddLeadsRequest;
 
     if (!newLeads || !Array.isArray(newLeads) || newLeads.length === 0) {
+      console.warn("Invalid leads request: no leads provided");
       return res.status(400).json({
         success: false,
         message: "No leads provided",
         count: 0,
       } as AddLeadsResponse);
     }
+
+    console.log(`Adding ${newLeads.length} leads to CSV...`);
 
     // Read existing CSV
     let csvContent = "";
@@ -109,9 +112,10 @@ export const handleAddLeads: RequestHandler = async (req, res) => {
     try {
       csvContent = await fs.readFile(LEADS_CSV_PATH, "utf-8");
       existingLeads = csvToLeads(csvContent);
+      console.log(`Read ${existingLeads.length} existing leads from CSV`);
     } catch (error) {
       // File might not exist yet, that's okay
-      console.warn("Could not read existing leads CSV, starting fresh");
+      console.warn("Could not read existing leads CSV, starting fresh:", error);
       existingLeads = [];
     }
 
@@ -132,8 +136,10 @@ export const handleAddLeads: RequestHandler = async (req, res) => {
 
     // Write back to CSV
     const updatedCSV = leadsToCSV(allLeads);
+    console.log(`Writing ${allLeads.length} total leads to CSV (path: ${LEADS_CSV_PATH})`);
     await fs.writeFile(LEADS_CSV_PATH, updatedCSV, "utf-8");
 
+    console.log(`Successfully added ${leadsToAdd.length} leads to CSV`);
     return res.json({
       success: true,
       message: `Successfully added ${leadsToAdd.length} leads to CSV`,
@@ -141,9 +147,10 @@ export const handleAddLeads: RequestHandler = async (req, res) => {
     } as AddLeadsResponse);
   } catch (error) {
     console.error("Error adding leads:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       success: false,
-      message: "Failed to add leads",
+      message: `Failed to add leads: ${errorMessage}`,
       count: 0,
     } as AddLeadsResponse);
   }
