@@ -82,8 +82,11 @@ export function parseCSV(csvContent: string): Lead[] {
           email,
           phone,
           website,
-          emailUnlocked: email === "Locked" ? false : false,
-          phoneUnlocked: phone === "Locked" ? false : false,
+          // Source CSV leads start as locked (user must click to unlock)
+          // If the CSV value is "Locked", it remains locked
+          // Otherwise, the actual value is stored and can be unlocked
+          emailUnlocked: false,
+          phoneUnlocked: false,
         });
         id++;
       }
