@@ -193,19 +193,40 @@ export default function Index() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [totalImportLeads, setTotalImportLeads] = useState(0);
 
-  // Load leads from CSV file on component mount
+  // Load leads from server API on component mount
   useEffect(() => {
     const loadLeads = async () => {
       try {
-        const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
-        if (leads.length > 0) {
-          setAllLeads(leads);
-          setDisplayedLeads(leads);
+        // Try to load from server API first
+        const response = await fetch("/api/leads");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.leads && data.leads.length > 0) {
+            setAllLeads(data.leads);
+            setDisplayedLeads(data.leads);
+            console.log("Leads loaded from server:", data.leads.length);
+          }
         } else {
-          console.warn("No leads loaded from CSV file");
+          // Fallback to loading from CSV file directly
+          console.warn("Failed to load from server API, falling back to CSV file");
+          const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
+          if (leads.length > 0) {
+            setAllLeads(leads);
+            setDisplayedLeads(leads);
+          }
         }
       } catch (error) {
-        console.error("Failed to load leads from CSV:", error);
+        console.error("Failed to load leads:", error);
+        // Try CSV file as last resort
+        try {
+          const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
+          if (leads.length > 0) {
+            setAllLeads(leads);
+            setDisplayedLeads(leads);
+          }
+        } catch (csvError) {
+          console.error("Failed to load from CSV file:", csvError);
+        }
       } finally {
         setIsLoadingLeads(false);
       }
