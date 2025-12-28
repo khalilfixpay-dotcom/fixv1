@@ -1175,6 +1175,36 @@ export default function Index() {
         </DialogContent>
       </Dialog>
 
+      {/* Import Progress Modal */}
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="dark:bg-slate-900 sm:max-w-md" showClose={false}>
+          <DialogHeader>
+            <DialogTitle>Importing Leads</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-700 dark:text-slate-300">Progress</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{importProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-300 ease-out"
+                  style={{ width: `${importProgress}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-center text-sm text-slate-600 dark:text-slate-400">
+              {importProgress === 100 ? (
+                <span className="text-green-600 dark:text-green-400 font-medium">✓ Import completed successfully!</span>
+              ) : (
+                <span>Processing {Math.round((importProgress / 100) * totalImportLeads)} of {totalImportLeads} leads...</span>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div
