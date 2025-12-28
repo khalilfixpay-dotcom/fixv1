@@ -1176,7 +1176,11 @@ export default function Index() {
       </Dialog>
 
       {/* Import Progress Modal */}
-      <Dialog open={importModalOpen} onOpenChange={importProgress !== 100 ? undefined : setImportModalOpen}>
+      <Dialog open={importModalOpen} onOpenChange={(open) => {
+        if (importProgress === 100 || !open) {
+          setImportModalOpen(open);
+        }
+      }}>
         <DialogContent className="dark:bg-slate-900 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Importing Leads</DialogTitle>
