@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleGetLeads, handleAddLeads } from "./routes/leads";
+import { handleGetLists, handleSaveLists } from "./routes/lists";
 
 export function createServer() {
   const app = express();
@@ -18,6 +20,14 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Leads persistence routes
+  app.get("/api/leads", handleGetLeads);
+  app.post("/api/leads", handleAddLeads);
+
+  // Lists persistence routes
+  app.get("/api/lists", handleGetLists);
+  app.post("/api/lists", handleSaveLists);
 
   return app;
 }
