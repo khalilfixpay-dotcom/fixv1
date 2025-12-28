@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit } from "lucide-react";
 import { useLeadsSelection } from "@/hooks/useLeadsSelection";
+import { loadLeadsFromCSV } from "@/lib/csvParser";
 
 interface Lead {
   id: number;
