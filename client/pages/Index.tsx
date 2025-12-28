@@ -208,7 +208,9 @@ export default function Index() {
           }
         } else {
           // Fallback to loading from CSV file directly
-          console.warn("Failed to load from server API, falling back to CSV file");
+          console.warn(
+            "Failed to load from server API, falling back to CSV file",
+          );
           const leads = await loadLeadsFromCSV(LEADS_CSV_URL);
           if (leads.length > 0) {
             setAllLeads(leads);
@@ -249,7 +251,10 @@ export default function Index() {
           }
         }
       } catch (error) {
-        console.warn("Failed to load lists from server, trying localStorage:", error);
+        console.warn(
+          "Failed to load lists from server, trying localStorage:",
+          error,
+        );
       }
 
       // Load other state from localStorage (backward compatibility)
@@ -260,7 +265,10 @@ export default function Index() {
           if (state.savedFilters) setSavedFilters(state.savedFilters);
           if (state.credits) setCredits(state.credits);
           // If server lists failed, try localStorage lists as fallback
-          if (state.savedLists && !sessionStorage.getItem("lists-loaded-from-server")) {
+          if (
+            state.savedLists &&
+            !sessionStorage.getItem("lists-loaded-from-server")
+          ) {
             setSavedLists(state.savedLists);
           }
         } catch (e) {
@@ -832,7 +840,8 @@ export default function Index() {
             );
           }, 500);
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           console.error("Failed to save leads to server:", errorMsg);
           setImportModalOpen(false);
           toast.error(`Failed to import: ${errorMsg}`);

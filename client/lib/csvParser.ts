@@ -70,8 +70,10 @@ export function parseCSV(csvContent: string): Lead[] {
     values.push(current.replace(/^"|"$/g, "").trim());
 
     if (values.length >= 6) {
-      const [name, industry, location, email, phone, website] =
-        values.slice(0, 6);
+      const [name, industry, location, email, phone, website] = values.slice(
+        0,
+        6,
+      );
 
       if (name) {
         leads.push({

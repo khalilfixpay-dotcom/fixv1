@@ -19,7 +19,10 @@ function leadsToCSV(leads: Lead[]): string {
     lead.website,
   ]);
 
-  return [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+  return [
+    headers.join(","),
+    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+  ].join("\n");
 }
 
 /**
@@ -52,7 +55,10 @@ function csvToLeads(csvContent: string): Lead[] {
     values.push(current.replace(/^"|"$/g, "").trim());
 
     if (values.length >= 6) {
-      const [name, industry, location, email, phone, website] = values.slice(0, 6);
+      const [name, industry, location, email, phone, website] = values.slice(
+        0,
+        6,
+      );
       if (name) {
         leads.push({
           id,
@@ -89,7 +95,7 @@ export const handleGetLeads: RequestHandler = async (req, res) => {
     res.status(500).json({
       success: false,
       leads: [],
-      error: `Failed to read leads: ${errorMsg}`
+      error: `Failed to read leads: ${errorMsg}`,
     });
   }
 };
@@ -143,7 +149,9 @@ export const handleAddLeads: RequestHandler = async (req, res) => {
 
     // Write back to CSV
     const updatedCSV = leadsToCSV(allLeads);
-    console.log(`Writing ${allLeads.length} total leads to CSV (path: ${LEADS_CSV_PATH})`);
+    console.log(
+      `Writing ${allLeads.length} total leads to CSV (path: ${LEADS_CSV_PATH})`,
+    );
     await fs.writeFile(LEADS_CSV_PATH, updatedCSV, "utf-8");
 
     console.log(`Successfully added ${leadsToAdd.length} leads to CSV`);

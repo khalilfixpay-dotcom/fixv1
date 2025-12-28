@@ -1,7 +1,12 @@
 import { RequestHandler } from "express";
 import { promises as fs } from "fs";
 import path from "path";
-import { SaveListsRequest, SaveListsResponse, LoadListsResponse, SavedList } from "@shared/api";
+import {
+  SaveListsRequest,
+  SaveListsResponse,
+  LoadListsResponse,
+  SavedList,
+} from "@shared/api";
 
 const LISTS_JSON_PATH = path.join(process.cwd(), "public", "lists.json");
 
@@ -35,7 +40,9 @@ export const handleSaveLists: RequestHandler = async (req, res) => {
     const { lists } = req.body as SaveListsRequest;
 
     if (!lists || !Array.isArray(lists)) {
-      console.warn("Invalid lists request: not an array or missing lists field");
+      console.warn(
+        "Invalid lists request: not an array or missing lists field",
+      );
       return res.status(400).json({
         success: false,
         message: "Invalid lists data",
