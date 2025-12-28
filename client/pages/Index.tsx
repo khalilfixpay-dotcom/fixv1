@@ -214,22 +214,86 @@ export default function Index() {
     loadLeads();
   }, []);
 
-  // Load state from localStorage
+  // Load state from server (lists) and localStorage (filters, credits)
   useEffect(() => {
-    const saved = localStorage.getItem("leads-app-state");
-    if (saved) {
+    const loadState = async () => {
+      // Try to load lists from server first
       try {
-        const state = JSON.parse(saved);
-        if (state.savedLists) setSavedLists(state.savedLists);
-        if (state.savedFilters) setSavedFilters(state.savedFilters);
-        if (state.credits) setCredits(state.credits);
-      } catch (e) {
-        console.error("Failed to load state", e);
+        const listsResponse = await fetch("/api/lists");
+        if (listsResponse.ok) {
+          const listsData = await listsResponse.json();
+          if (listsData.lists && listsData.lists.length > 0) {
+            setSavedLists(listsData.lists);
+            console.log("Lists loaded from server:", listsData.lists.length);
+          }
+        }
+      } catch (error) {
+        console.warn("Failed to load lists from server, trying localStorage:", error);
       }
-    }
+
+      // Load other state from localStorage (backward compatibility)
+      const saved = localStorage.getItem("leads-app-state");
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          if (state.savedFilters) setSavedFilters(state.savedFilters);
+          if (state.credits) setCredits(state.credits);
+          // If server lists failed, try localStorage lists as fallback
+          if (state.savedLists && !sessionStorage.getItem("lists-loaded-from-server")) {
+            setSavedLists(state.savedLists);
+          }
+        } catch (e) {
+          console.error("Failed to load state from localStorage", e);
+        }
+      }
+      sessionStorage.setItem("lists-loaded-from-server", "true");
+    };
+
+    loadState();
   }, []);
 
-  // Save state to localStorage (only save essential data, not the massive allLeads array)
+  // Save lists to server whenever they change
+  useEffect(() => {
+    const saveLists = async () => {
+      try {
+        const response = await fetch("/api/lists", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ lists: savedLists }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save lists to server");
+        }
+
+        console.log("Lists saved to server");
+      } catch (error) {
+        console.error("Failed to save lists to server:", error);
+        // Still save to localStorage as fallback
+        try {
+          localStorage.setItem(
+            "leads-app-state",
+            JSON.stringify({
+              savedLists,
+              savedFilters,
+              credits,
+            }),
+          );
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+      }
+    };
+
+    // Only save if lists have changed (after initial load)
+    if (sessionStorage.getItem("lists-loaded-from-server") === "true") {
+      saveLists();
+    }
+  }, [savedLists]);
+
+  // Save other state to localStorage (filters, credits)
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -244,7 +308,7 @@ export default function Index() {
       // Silently fail if localStorage quota exceeded
       console.warn("Failed to save state to localStorage:", e);
     }
-  }, [savedLists, savedFilters, credits]);
+  }, [savedFilters, credits]);
 
   // Filter and sort leads
   const filteredLeads = displayedLeads.filter((lead) => {
